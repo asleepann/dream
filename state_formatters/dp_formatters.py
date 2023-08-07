@@ -198,6 +198,17 @@ def last_utt_and_history_dialog(dialog: Dict) -> List:
     )
 
 
+def summarization_annotator_formatter(dialog: Dict):
+    # Used by: summarization annotator
+    sents = [utt["text"] for utt in dialog["utterances"]]
+    pointer = (len(sents) + 1) % 6 if (len(sents) + 1) % 6 != 0 else 6
+    sents = sents[-(pointer + 5) :]
+    bot_attributes = dialog["bot_utterances"][-1]["user"]["attributes"] if len(dialog["bot_utterances"]) else {}
+    previous_summary = bot_attributes["summarized_dialog"] if "summarized_dialog" in bot_attributes.keys() else []
+    previous_summary = previous_summary if previous_summary else ""
+    return [{"dialogs": [sents], "previous_summaries": [previous_summary]}]
+
+
 def convers_evaluator_annotator_formatter(dialog: Dict) -> List[Dict]:
     return utils.dream_formatter(
         dialog,
@@ -277,6 +288,22 @@ def utt_sentrewrite_modified_last_dialog_emotion_skill(dialog: Dict):
 
 def el_formatter_dialog(dialog: Dict):
     return utils.dream_formatter(dialog, result_keys=["entity_substr", "entity_tags"])
+
+
+def custom_el_formatter_dialog(dialog: Dict):
+    # Used by: entity_linking annotator
+    entity_substr_list, entity_tags_list, context = prepare_el_input(dialog)
+    property_extraction = dialog["human_utterances"][-1]["annotations"].get("property_extraction", {})
+    user_id = str(dialog["human_utterances"][-1].get("user", {}).get("id", ""))
+    return [
+        {
+            "user_id": [user_id],
+            "entity_substr": [entity_substr_list],
+            "entity_tags": [entity_tags_list],
+            "context": [context],
+            "property_extraction": [property_extraction],
+        }
+    ]
 
 
 def kbqa_formatter_dialog(dialog: Dict):
@@ -600,7 +627,6 @@ def hypothesis_scorer_formatter(dialog: Dict) -> List[Dict]:
     ]
 
     contexts = len(hypotheses) * [[uttr["text"] for uttr in dialog["utterances"]]]
-
     return [{"contexts": contexts, "hypotheses": result_hypotheses}]
 
 
